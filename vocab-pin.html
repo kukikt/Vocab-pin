@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f1117">
+<title>Vocab Pin</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#171a24;--border:rgba(255,255,255,0.07);
+  --text:#f0eee9;--muted:rgba(240,238,233,0.45);--dim:rgba(240,238,233,0.22);
+  --accent:#c8f06b;--accent-dim:rgba(200,240,107,0.12);
+  --sans:'DM Sans',system-ui,sans-serif;--serif:'DM Serif Display',Georgia,serif;--mono:'DM Mono',monospace;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden;}
+#app{height:100dvh;display:flex;flex-direction:column;padding:env(safe-area-inset-top,16px) 0 env(safe-area-inset-bottom,16px);}
+.prog{height:2px;background:var(--border);flex-shrink:0;position:relative;overflow:hidden;}
+.prog-fill{position:absolute;inset:0;height:100%;background:var(--accent);transition:width .5s ease;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;flex-shrink:0;}
+.logo{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;}
+.logo span{color:var(--accent);}
+.timer{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;color:var(--muted);}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.85);}}
+.cats{padding:0 20px 14px;flex-shrink:0;overflow-x:auto;scrollbar-width:none;}
+.cats::-webkit-scrollbar{display:none;}
+.cat-row{display:flex;gap:7px;width:max-content;}
+.cat{font-family:var(--sans);font-size:11.5px;font-weight:500;padding:5px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:var(--muted);cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:all .18s;}
+.cat.on{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+.divider{height:1px;background:var(--border);margin:0 20px;flex-shrink:0;}
+.card{flex:1;display:flex;flex-direction:column;justify-content:center;padding:28px;position:relative;overflow:hidden;}
+.card::before,.card::after{content:'';position:absolute;width:32px;height:32px;border-color:var(--border);border-style:solid;}
+.card::before{top:20px;left:20px;border-width:1px 0 0 1px;}
+.card::after{bottom:20px;right:20px;border-width:0 1px 1px 0;}
+.word-block{opacity:0;transform:translateY(12px);transition:opacity .35s ease,transform .35s ease;}
+.word-block.show{opacity:1;transform:none;}
+.pos{font-family:var(--mono);font-size:10px;letter-spacing:.15em;color:var(--accent);text-transform:uppercase;margin-bottom:10px;}
+.word{font-family:var(--serif);font-size:clamp(36px,10vw,52px);line-height:1.05;margin-bottom:6px;}
+.pron{font-family:var(--mono);font-size:12px;color:var(--dim);margin-bottom:22px;}
+.def-label{font-size:9px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:7px;}
+.def{font-size:15px;font-weight:300;line-height:1.65;margin-bottom:20px;}
+.ex-box{border-left:2px solid var(--accent);padding:10px 14px;background:var(--accent-dim);border-radius:0 6px 6px 0;}
+.ex-label{font-size:9px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);opacity:.7;margin-bottom:5px;}
+.ex{font-size:13.5px;font-style:italic;line-height:1.6;color:rgba(240,238,233,.75);}
+.ex em{font-style:normal;color:var(--text);font-weight:500;}
+.bottom{padding:14px 20px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+.info{font-family:var(--mono);font-size:11px;color:var(--dim);}
+.nav{display:flex;gap:8px;align-items:center;}
+.nbtn{width:38px;height:38px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:all .16s;}
+.nbtn:active,.nbtn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.nbtn svg{width:15px;height:15px;}
+.next{height:38px;padding:0 18px;border-radius:20px;border:1px solid var(--accent);background:var(--accent-dim);color:var(--accent);font-family:var(--sans);font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;transition:all .16s;}
+.next:active,.next:hover{background:var(--accent);color:#0f1117;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="prog"><div class="prog-fill" id="pf"></div></div>
+  <div class="topbar">
+    <div class="logo">Vocab <span>Pin</span></div>
+    <div class="timer"><div class="dot"></div><span id="tl">—</span></div>
+  </div>
+  <div class="cats"><div class="cat-row" id="cats"></div></div>
+  <div class="divider"></div>
+  <div class="card">
+    <div class="word-block" id="wb">
+      <div class="pos" id="pos"></div>
+      <div class="word" id="word"></div>
+      <div class="pron" id="pron"></div>
+      <div class="def-label">Definition</div>
+      <div class="def" id="def"></div>
+      <div class="ex-box">
+        <div class="ex-label">Example</div>
+        <div class="ex" id="ex"></div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="info" id="info"></div>
+    <div class="nav">
+      <button class="nbtn" id="prev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <button class="next" id="nxt">Next <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+    </div>
+  </div>
+</div>
+<script>
+const W=[
+// Academic (20)
+{word:"substantiate",pron:"/səbˈstæn.ʃi.eɪt/",pos:"verb",cat:"Academic",def:"To provide evidence supporting a claim.",ex:"The researcher failed to <em>substantiate</em> her hypothesis with sufficient data."},
+{word:"paradigm",pron:"/ˈpær.ə.daɪm/",pos:"noun",cat:"Academic",def:"A typical model or framework for understanding something.",ex:"The discovery triggered a shift in the prevailing scientific <em>paradigm</em>."},
+{word:"mitigate",pron:"/ˈmɪt.ɪ.ɡeɪt/",pos:"verb",cat:"Academic",def:"To lessen the severity of something.",ex:"Governments must act to <em>mitigate</em> the effects of climate change."},
+{word:"nuanced",pron:"/ˈnjuː.ɑːnst/",pos:"adjective",cat:"Academic",def:"Showing subtle distinctions; not simplistic.",ex:"A <em>nuanced</em> understanding of the issue is essential for policymakers."},
+{word:"corroborate",pron:"/kəˈrɒb.ər.eɪt/",pos:"verb",cat:"Academic",def:"To confirm or support a statement or theory.",ex:"The new findings <em>corroborate</em> the earlier study's conclusions."},
+{word:"exacerbate",pron:"/ɪɡˈzæs.ər.beɪt/",pos:"verb",cat:"Academic",def:"To make a problem or situation worse.",ex:"The drought <em>exacerbated</em> the already severe food shortage."},
+{word:"empirical",pron:"/ɪmˈpɪr.ɪ.kəl/",pos:"adjective",cat:"Academic",def:"Based on observation or experiment rather than theory.",ex:"The researchers sought <em>empirical</em> evidence to support their claims."},
+{word:"rhetoric",pron:"/ˈret.ər.ɪk/",pos:"noun",cat:"Academic",def:"Persuasive language, often empty or insincere.",ex:"Critics accused the politician of using <em>rhetoric</em> rather than offering solutions."},
+{word:"synthesis",pron:"/ˈsɪn.θə.sɪs/",pos:"noun",cat:"Academic",def:"The combination of elements to form a whole.",ex:"The essay presents a <em>synthesis</em> of competing theoretical perspectives."},
+{word:"ubiquitous",pron:"/juːˈbɪk.wɪ.təs/",pos:"adjective",cat:"Academic",def:"Present or found everywhere.",ex:"Smartphones have become <em>ubiquitous</em> in modern society."},
+{word:"hypothesis",pron:"/haɪˈpɒθ.ə.sɪs/",pos:"noun",cat:"Academic",def:"A proposed explanation to be tested by research.",ex:"The scientists devised an experiment to test their <em>hypothesis</em>."},
+{word:"coherent",pron:"/kəʊˈhɪər.ənt/",pos:"adjective",cat:"Academic",def:"Logical, consistent, and clearly expressed.",ex:"The report presents a <em>coherent</em> argument for policy reform."},
+{word:"proliferate",pron:"/prəˈlɪf.ər.eɪt/",pos:"verb",cat:"Academic",def:"To increase rapidly in number or spread widely.",ex:"Online misinformation has <em>proliferated</em> in recent years."},
+{word:"ambiguous",pron:"/æmˈbɪɡ.ju.əs/",pos:"adjective",cat:"Academic",def:"Open to more than one interpretation.",ex:"The wording of the law was deliberately <em>ambiguous</em>."},
+{word:"methodology",pron:"/ˌmeθ.əˈdɒl.ə.dʒi/",pos:"noun",cat:"Academic",def:"A system of methods used in research.",ex:"The paper describes the <em>methodology</em> used to collect data."},
+{word:"criterion",pron:"/kraɪˈtɪər.i.ən/",pos:"noun",cat:"Academic",def:"A standard by which something is judged.",ex:"Academic merit is the primary <em>criterion</em> for the scholarship."},
+{word:"prevalent",pron:"/ˈprev.ə.lənt/",pos:"adjective",cat:"Academic",def:"Widespread in a particular area or time.",ex:"Obesity is increasingly <em>prevalent</em> in developed nations."},
+{word:"scrutiny",pron:"/ˈskruː.tɪ.ni/",pos:"noun",cat:"Academic",def:"Close and detailed examination.",ex:"The government's record came under intense public <em>scrutiny</em>."},
+{word:"viable",pron:"/ˈvaɪ.ə.bəl/",pos:"adjective",cat:"Academic",def:"Capable of working successfully; feasible.",ex:"Solar energy is now a <em>viable</em> alternative to fossil fuels."},
+{word:"rationale",pron:"/ˌræʃ.əˈnɑːl/",pos:"noun",cat:"Academic",def:"The underlying reason or logical basis for something.",ex:"The report explains the <em>rationale</em> behind the new grading system."},
+// Society (20)
+{word:"disparity",pron:"/dɪˈspær.ɪ.ti/",pos:"noun",cat:"Society",def:"A great difference or inequality.",ex:"The growing <em>disparity</em> between rich and poor is alarming."},
+{word:"cohesion",pron:"/kəʊˈhiː.ʒən/",pos:"noun",cat:"Society",def:"Unity among a group of people.",ex:"Social <em>cohesion</em> depends on shared values and mutual trust."},
+{word:"stigma",pron:"/ˈstɪɡ.mə/",pos:"noun",cat:"Society",def:"A mark of disgrace associated with a circumstance.",ex:"There is still a <em>stigma</em> surrounding mental illness in many cultures."},
+{word:"polarise",pron:"/ˈpəʊ.lə.raɪz/",pos:"verb",cat:"Society",def:"To divide into two sharply opposing groups.",ex:"The debate over immigration has <em>polarised</em> the electorate."},
+{word:"assimilation",pron:"/əˌsɪm.ɪˈleɪ.ʃən/",pos:"noun",cat:"Society",def:"The process of adopting another group's culture.",ex:"Cultural <em>assimilation</em> can be both enriching and disorienting."},
+{word:"discrimination",pron:"/dɪˌskrɪm.ɪˈneɪ.ʃən/",pos:"noun",cat:"Society",def:"Unjust treatment based on group membership.",ex:"Racial <em>discrimination</em> remains a serious problem in many workplaces."},
+{word:"diversity",pron:"/daɪˈvɜː.sɪ.ti/",pos:"noun",cat:"Society",def:"The presence of a variety of people or things.",ex:"Cultural <em>diversity</em> enriches the social fabric of a nation."},
+{word:"inequality",pron:"/ˌɪn.ɪˈkwɒl.ɪ.ti/",pos:"noun",cat:"Society",def:"Uneven distribution of resources or social standing.",ex:"Income <em>inequality</em> has widened significantly in recent decades."},
+{word:"solidarity","pron":"/ˌsɒl.ɪˈdær.ɪ.ti/",pos:"noun",cat:"Society",def:"Unity and agreement among a group.",ex:"The strike demonstrated remarkable <em>solidarity</em> among the workers."},
+{word:"urbanisation",pron:"/ˌɜː.bən.aɪˈzeɪ.ʃən/",pos:"noun",cat:"Society",def:"The process by which rural areas become urban.",ex:"Rapid <em>urbanisation</em> has put pressure on city infrastructure."},
+{word:"globalisation",pron:"/ˌɡləʊ.bəl.aɪˈzeɪ.ʃən/",pos:"noun",cat:"Society",def:"The process of international integration.",ex:"<em>Globalisation</em> has created both opportunities and inequalities."},
+{word:"ideology",pron:"/ˌaɪ.diˈɒl.ə.dʒi/",pos:"noun",cat:"Society",def:"A system of ideas forming the basis of a belief.",ex:"Political parties are shaped by competing <em>ideologies</em>."},
+{word:"empathy",pron:"/ˈem.pə.θi/",pos:"noun",cat:"Society",def:"The ability to understand and share the feelings of another.",ex:"Good leadership requires a high degree of <em>empathy</em>."},
+{word:"prejudice",pron:"/ˈpredʒ.ʊ.dɪs/",pos:"noun",cat:"Society",def:"Preconceived opinion not based on reason.",ex:"Racial <em>prejudice</em> can affect how individuals are treated in daily life."},
+{word:"resilience",pron:"/rɪˈzɪl.i.əns/",pos:"noun",cat:"Society",def:"The ability to recover from difficulties.",ex:"Community <em>resilience</em> is key to surviving natural disasters."},
+{word:"autonomy",pron:"/ɔːˈtɒn.ə.mi/",pos:"noun",cat:"Society",def:"The right or condition of self-governance.",ex:"Individuals should have the <em>autonomy</em> to make their own choices."},
+{word:"mobility",pron:"/məʊˈbɪl.ɪ.ti/",pos:"noun",cat:"Society",def:"The ability to move between social levels.",ex:"Social <em>mobility</em> has declined in many developed countries."},
+{word:"marginalise",pron:"/ˈmɑː.dʒɪ.nəl.aɪz/",pos:"verb",cat:"Society",def:"To treat a group as unimportant or powerless.",ex:"Minority communities are often <em>marginalised</em> by mainstream institutions."},
+{word:"stereotype",pron:"/ˈster.i.ə.taɪp/",pos:"noun",cat:"Society",def:"A fixed, oversimplified image of a group.",ex:"Media portrayals often reinforce harmful <em>stereotypes</em>."},
+{word:"vulnerability",pron:"/ˌvʌl.nər.əˈbɪl.ɪ.ti/",pos:"noun",cat:"Society",def:"The state of being exposed to harm.",ex:"Children in conflict zones face extreme <em>vulnerability</em>."},
+// Environment (20)
+{word:"biodiversity",pron:"/ˌbaɪ.əʊ.daɪˈvɜː.sɪ.ti/",pos:"noun",cat:"Environment",def:"The variety of life in a habitat or on Earth.",ex:"Deforestation poses a severe threat to <em>biodiversity</em> in tropical regions."},
+{word:"anthropogenic",pron:"/ˌæn.θrə.pəˈdʒen.ɪk/",pos:"adjective",cat:"Environment",def:"Originating in human activity.",ex:"Scientists attribute the warming trend to <em>anthropogenic</em> emissions."},
+{word:"sustainability",pron:"/səˌsteɪ.nəˈbɪl.ɪ.ti/",pos:"noun",cat:"Environment",def:"Using resources without depleting them for future generations.",ex:"Corporate <em>sustainability</em> strategies are increasingly important to investors."},
+{word:"deforestation",pron:"/diːˌfɒr.ɪˈsteɪ.ʃən/",pos:"noun",cat:"Environment",def:"The clearing of forests on a large scale.",ex:"<em>Deforestation</em> in the Amazon threatens global climate stability."},
+{word:"emission",pron:"/ɪˈmɪʃ.ən/",pos:"noun",cat:"Environment",def:"The production and release of pollutants into the air.",ex:"Transport accounts for a large share of total carbon <em>emissions</em>."},
+{word:"extinction",pron:"/ɪkˈstɪŋk.ʃən/",pos:"noun",cat:"Environment",def:"The dying out of a species entirely.",ex:"Scientists warn that mass <em>extinction</em> threatens global biodiversity."},
+{word:"ecosystem",pron:"/ˈiː.kəʊˌsɪs.təm/",pos:"noun",cat:"Environment",def:"A biological community of interacting organisms and their environment.",ex:"Coral reefs are among the most diverse <em>ecosystems</em> on the planet."},
+{word:"mitigation",pron:"/ˌmɪt.ɪˈɡeɪ.ʃən/",pos:"noun",cat:"Environment",def:"Action to reduce the severity of something harmful.",ex:"Climate <em>mitigation</em> strategies include carbon capture and reforestation."},
+{word:"permafrost",pron:"/ˈpɜː.mə.frɒst/",pos:"noun",cat:"Environment",def:"Ground that remains frozen throughout the year.",ex:"Melting <em>permafrost</em> releases stored carbon into the atmosphere."},
+{word:"renewable",pron:"/rɪˈnjuː.ə.bəl/",pos:"adjective",cat:"Environment",def:"Able to be replenished naturally.",ex:"Investment in <em>renewable</em> energy sources has surged globally."},
+{word:"drought",pron:"/draʊt/",pos:"noun",cat:"Environment",def:"A prolonged period of abnormally low rainfall.",ex:"The <em>drought</em> devastated crops across the entire region."},
+{word:"carbon footprint",pron:"/ˈkɑː.bən ˌfʊt.prɪnt/",pos:"noun",cat:"Environment",def:"The total greenhouse gases produced by an individual or activity.",ex:"Consumers are encouraged to reduce their <em>carbon footprint</em>."},
+{word:"pollutant",pron:"/pəˈluː.tənt/",pos:"noun",cat:"Environment",def:"A substance that causes pollution.",ex:"Industrial <em>pollutants</em> have severely damaged the local river ecosystem."},
+{word:"reforestation",pron:"/ˌriː.fɒr.ɪˈsteɪ.ʃən/",pos:"noun",cat:"Environment",def:"Planting trees on deforested land.",ex:"<em>Reforestation</em> projects can help restore lost habitats."},
+{word:"habitat",pron:"/ˈhæb.ɪ.tæt/",pos:"noun",cat:"Environment",def:"The natural home of an organism.",ex:"Urban sprawl is destroying the natural <em>habitat</em> of many species."},
+{word:"endangered",pron:"/ɪnˈdeɪn.dʒəd/",pos:"adjective",cat:"Environment",def:"At serious risk of extinction.",ex:"The tiger is an <em>endangered</em> species due to habitat loss and poaching."},
+{word:"global warming",pron:"/ˌɡləʊ.bəl ˈwɔː.mɪŋ/",pos:"noun",cat:"Environment",def:"The gradual rise in Earth's average temperature.",ex:"<em>Global warming</em> is causing glaciers to retreat at unprecedented rates."},
+{word:"conservation",pron:"/ˌkɒn.səˈveɪ.ʃən/",pos:"noun",cat:"Environment",def:"Preservation and protection of natural environments.",ex:"Wildlife <em>conservation</em> requires international cooperation."},
+{word:"microplastic",pron:"/ˌmaɪ.krəʊˈplæs.tɪk/",pos:"noun",cat:"Environment",def:"Tiny plastic particles polluting the environment.",ex:"<em>Microplastics</em> have been found in the deepest parts of the ocean."},
+{word:"net zero",pron:"/ˌnet ˈzɪər.əʊ/",pos:"noun",cat:"Environment",def:"Balancing greenhouse gas emissions with removals.",ex:"Many governments have committed to reaching <em>net zero</em> by 2050."},
+// Technology (20)
+{word:"algorithm",pron:"/ˈæl.ɡə.rɪ.ðəm/",pos:"noun",cat:"Technology",def:"A set of rules a computer follows to solve problems.",ex:"The recommendation <em>algorithm</em> determines what content users see next."},
+{word:"automation",pron:"/ˌɔː.tə.ˈmeɪ.ʃən/",pos:"noun",cat:"Technology",def:"Using technology to perform tasks with minimal human input.",ex:"Factory <em>automation</em> has reduced the need for manual labour."},
+{word:"artificial intelligence",pron:"/ˌɑː.tɪˈfɪʃ.əl ɪnˈtel.ɪ.dʒəns/",pos:"noun",cat:"Technology",def:"Computer systems performing tasks requiring human intelligence.",ex:"<em>Artificial intelligence</em> is transforming healthcare diagnostics."},
+{word:"cybersecurity",pron:"/ˌsaɪ.bə.sɪˈkjʊər.ɪ.ti/",pos:"noun",cat:"Technology",def:"Protection of computer systems from digital attacks.",ex:"Investing in <em>cybersecurity</em> is critical for modern businesses."},
+{word:"encryption",pron:"/ɪnˈkrɪp.ʃən/",pos:"noun",cat:"Technology",def:"Encoding data to prevent unauthorised access.",ex:"End-to-end <em>encryption</em> protects messages from interception."},
+{word:"surveillance",pron:"/səˈveɪ.ləns/",pos:"noun",cat:"Technology",def:"Close monitoring of a person or group, especially digitally.",ex:"Critics argue that digital <em>surveillance</em> violates personal privacy."},
+{word:"misinformation",pron:"/ˌmɪs.ɪn.fəˈmeɪ.ʃən/",pos:"noun",cat:"Technology",def:"False information spread without harmful intent.",ex:"Social media algorithms can amplify <em>misinformation</em> rapidly."},
+{word:"data breach",pron:"/ˈdeɪ.tə ˌbriːtʃ/",pos:"noun",cat:"Technology",def:"Unauthorised access to confidential data.",ex:"The <em>data breach</em> exposed the personal details of millions of users."},
+{word:"innovation",pron:"/ˌɪn.əˈveɪ.ʃən/",pos:"noun",cat:"Technology",def:"A new method, idea, or product.",ex:"Continuous <em>innovation</em> is essential for firms to remain competitive."},
+{word:"disruptive",pron:"/dɪˈsrʌp.tɪv/",pos:"adjective",cat:"Technology",def:"Radically altering an existing industry or technology.",ex:"Streaming services proved to be a <em>disruptive</em> force in entertainment."},
+{word:"machine learning",pron:"/məˈʃiːn ˌlɜː.nɪŋ/",pos:"noun",cat:"Technology",def:"AI systems that improve automatically through experience.",ex:"<em>Machine learning</em> is used to detect fraud in financial transactions."},
+{word:"scalable",pron:"/ˈskeɪ.lə.bəl/",pos:"adjective",cat:"Technology",def:"Able to be expanded to handle greater demand.",ex:"The company needs a <em>scalable</em> solution to accommodate rapid growth."},
+{word:"platform",pron:"/ˈplæt.fɔːm/",pos:"noun",cat:"Technology",def:"A digital environment enabling user interaction.",ex:"Social media <em>platforms</em> have transformed how people communicate."},
+{word:"autonomous",pron:"/ɔːˈtɒn.ə.məs/",pos:"adjective",cat:"Technology",def:"Acting independently without human control.",ex:"<em>Autonomous</em> vehicles use sensors to navigate without a driver."},
+{word:"blockchain",pron:"/ˈblɒk.tʃeɪn/",pos:"noun",cat:"Technology",def:"A decentralised digital ledger recording transactions.",ex:"<em>Blockchain</em> technology underpins most cryptocurrencies."},
+{word:"digital divide",pron:"/ˈdɪdʒ.ɪ.təl dɪˈvaɪd/",pos:"noun",cat:"Technology",def:"The gap between those with and without internet access.",ex:"The <em>digital divide</em> disadvantages rural and low-income communities."},
+{word:"obsolete",pron:"/ˌɒb.səˈliːt/",pos:"adjective",cat:"Technology",def:"No longer in use; outdated.",ex:"Physical maps have become largely <em>obsolete</em> in the smartphone era."},
+{word:"virtual reality",pron:"/ˌvɜː.tʃu.əl riˈæl.ɪ.ti/",pos:"noun",cat:"Technology",def:"A simulated three-dimensional digital environment.",ex:"<em>Virtual reality</em> is being used to treat phobias and PTSD."},
+{word:"semiconductor",pron:"/ˌsem.i.kənˈdʌk.tər/",pos:"noun",cat:"Technology",def:"A material whose conductivity lies between a conductor and insulator.",ex:"The global <em>semiconductor</em> shortage disrupted car production worldwide."},
+{word:"deepfake",pron:"/ˈdiːp.feɪk/",pos:"noun",cat:"Technology",def:"AI-generated fake video or audio content.",ex:"<em>Deepfakes</em> pose a serious threat to public trust in media."},
+// Economy (10)
+{word:"inflation",pron:"/ɪnˈfleɪ.ʃən/",pos:"noun",cat:"Economy",def:"A general rise in prices over time.",ex:"High <em>inflation</em> erodes the purchasing power of consumers."},
+{word:"austerity",pron:"/ɒˈster.ɪ.ti/",pos:"noun",cat:"Economy",def:"Severe economic measures to reduce a budget deficit.",ex:"Years of <em>austerity</em> led to widespread cuts in public services."},
+{word:"recession",pron:"/rɪˈseʃ.ən/",pos:"noun",cat:"Economy",def:"A period of temporary economic decline.",ex:"The country entered a deep <em>recession</em> following the financial crisis."},
+{word:"fiscal",pron:"/ˈfɪs.kəl/",pos:"adjective",cat:"Economy",def:"Relating to government revenue, especially taxes.",ex:"The government announced new <em>fiscal</em> policies to stimulate growth."},
+{word:"subsidy",pron:"/ˈsʌb.sɪ.di/",pos:"noun",cat:"Economy",def:"Government financial support for a sector or activity.",ex:"Agricultural <em>subsidies</em> help keep food prices affordable."},
+{word:"monopoly",pron:"/məˈnɒp.ə.li/",pos:"noun",cat:"Economy",def:"Exclusive control of a market by one company.",ex:"Regulators moved to break up the company's <em>monopoly</em>."},
+{word:"tariff",pron:"/ˈtær.ɪf/",pos:"noun",cat:"Economy",def:"A tax on imported goods.",ex:"New <em>tariffs</em> on steel imports sparked a trade dispute."},
+{word:"volatility",pron:"/ˌvɒl.əˈtɪl.ɪ.ti/",pos:"noun",cat:"Economy",def:"The tendency to change rapidly and unpredictably.",ex:"Investors are concerned about the <em>volatility</em> of cryptocurrency markets."},
+{word:"GDP",pron:"/ˌdʒiː.diːˈpiː/",pos:"noun",cat:"Economy",def:"Total value of goods and services a country produces.",ex:"A rise in <em>GDP</em> does not always reflect improved living standards."},
+{word:"supply chain",pron:"/ˈsʌp.laɪ ˌtʃeɪn/",pos:"noun",cat:"Economy",def:"The sequence of processes involved in producing goods.",ex:"The pandemic disrupted global <em>supply chains</em> significantly."},
+];
+
+const CATS=['All',...new Set(W.map(w=>w.cat))];
+const HOUR=3600000;
+let cat='All',fw=[],hist=[],pos_=-1,timer=null;
+
+function seed(s){let n=s>>>0;return()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/0x100000000};}
+function hIdx(words,c){if(!words.length)return 0;const sl=Math.floor(Date.now()/HOUR),cs=[...c].reduce((a,x)=>a+x.charCodeAt(0),0);return Math.floor(seed(sl*9973+cs)()*words.length);}
+function msLeft(){return HOUR-(Date.now()%HOUR);}
+function fmt(ms){const s=Math.floor(ms/1000),m=Math.floor(s/60);return`next in ${m}m ${String(s%60).padStart(2,'0')}s`;}
+
+function render(w,anim=true){
+  const b=document.getElementById('wb');
+  const go=()=>{
+    document.getElementById('pos').textContent=w.pos||'';
+    document.getElementById('word').textContent=w.word||'';
+    document.getElementById('pron').textContent=w.pron||'';
+    document.getElementById('def').textContent=w.def||'';
+    document.getElementById('ex').innerHTML=w.ex||'';
+    b.classList.add('show');
+    const i=hist[pos_];
+    document.getElementById('info').textContent=`${i+1} / ${fw.length} · ${cat==='All'?'All words':cat}`;
+    document.getElementById('pf').style.width=`${((pos_+1)/Math.max(hist.length,1))*100}%`;
+  };
+  if(anim){b.classList.remove('show');setTimeout(go,190);}else go();
+}
+function next(){
+  if(!fw.length)return;
+  if(pos_<hist.length-1){pos_++;}else{
+    let pool=fw.map((_,i)=>i);
+    if(pool.length>1&&pos_>=0)pool=pool.filter(i=>i!==hist[pos_]);
+    const n=pool[Math.floor(Math.random()*pool.length)];
+    hist=[...hist.slice(0,pos_+1),n];pos_=hist.length-1;
+  }
+  render(fw[hist[pos_]]);
+}
+function prev(){if(pos_<=0)return;pos_--;render(fw[hist[pos_]]);}
+function setcat(c){
+  cat=c;
+  document.querySelectorAll('.cat').forEach(b=>b.classList.toggle('on',b.dataset.c===c));
+  fw=c==='All'?[...W]:W.filter(w=>w.cat===c);
+  const i=hIdx(fw,c);hist=[i];pos_=0;render(fw[i],false);
+}
+function startTimer(){
+  let nx=Date.now()+msLeft();
+  clearInterval(timer);
+  timer=setInterval(()=>{
+    const r=nx-Date.now();
+    if(r<=0){nx=Date.now()+HOUR;setcat(cat);}
+    document.getElementById('tl').textContent=fmt(Math.max(0,r));
+  },1000);
+  document.getElementById('tl').textContent=fmt(msLeft());
+}
+(function(){
+  const row=document.getElementById('cats');
+  CATS.forEach(c=>{
+    const b=document.createElement('button');
+    b.className='cat'+(c==='All'?' on':'');
+    b.dataset.c=c;b.textContent=c;
+    b.onclick=()=>setcat(c);
+    row.appendChild(b);
+  });
+  document.getElementById('nxt').onclick=next;
+  document.getElementById('prev').onclick=prev;
+  setcat('All');startTimer();
+})();
+</script>
+</body>
+</html>
